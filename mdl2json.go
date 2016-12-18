@@ -86,8 +86,8 @@ type Frame struct {
 }
 
 func main() {
-	if len(os.Args) != 2 {
-		log.Fatalf("usage: %v <model.mdl>", os.Args[0])
+	if len(os.Args) != 3 {
+		log.Fatalf("usage: %v <model.mdl> <model.json>", os.Args[0])
 	}
 
 	file, err := os.Open(os.Args[1])
@@ -159,7 +159,7 @@ func main() {
 		frame_names[k] = name[0]
 	}
 
-	out, err := os.Create(mdl_name + ".json")
+	out, err := os.Create(os.Args[2])
 	if err != nil {
 		log.Fatal(err)
 	}

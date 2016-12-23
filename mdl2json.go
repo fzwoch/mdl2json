@@ -87,7 +87,7 @@ type Frame struct {
 
 func main() {
 	if len(os.Args) != 3 {
-		log.Fatalf("usage: %v <model.mdl> <model.json>", os.Args[0])
+		log.Fatalf("usage: %v <input.mdl> <output.json>", os.Args[0])
 	}
 
 	file, err := os.Open(os.Args[1])

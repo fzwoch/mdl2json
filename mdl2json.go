@@ -1,7 +1,7 @@
 /*
  * mdl2json
  *
- * Copyright (C) 2016-2018 Florian Zwoch <fzwoch@gmail.com>
+ * Copyright (C) 2016 Florian Zwoch <fzwoch@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,60 +29,60 @@ import (
 	"strings"
 )
 
-type vec3 struct {
-	x float32
-	y float32
-	z float32
+type Vec3 struct {
+	X float32
+	Y float32
+	Z float32
 }
 
-type mdlHeader struct {
-	id           uint32
-	version      uint32
-	scale        vec3
-	origin       vec3
-	radius       float32
-	offsets      vec3
-	numSkins     uint32
-	skinWidth    uint32
-	skinHeight   uint32
-	numVerts     uint32
-	numTriangles uint32
-	numFrames    uint32
-	syncType     uint32
-	flags        uint32
-	size         float32
+type MdlHeader struct {
+	Id           uint32
+	Version      uint32
+	Scale        Vec3
+	Origin       Vec3
+	Radius       float32
+	Offsets      Vec3
+	NumSkins     uint32
+	SkinWidth    uint32
+	SkinHeight   uint32
+	NumVerts     uint32
+	NumTriangles uint32
+	NumFrames    uint32
+	SyncType     uint32
+	Flags        uint32
+	Size         float32
 }
 
-type skin struct {
-	skinType uint32
+type Skin struct {
+	Type uint32
 }
 
-type skinGroup struct {
-	numSkins uint32
-	time     float32
+type SkinGroup struct {
+	NumSkins uint32
+	Time     float32
 }
 
-type stVert struct {
-	onSeam uint32
-	s      uint32
-	t      uint32
+type STVert struct {
+	OnSeam uint32
+	S      uint32
+	T      uint32
 }
 
-type triangle struct {
-	front  uint32
-	vertex [3]uint32
+type Triangle struct {
+	Front  uint32
+	Vertex [3]uint32
 }
 
-type vert struct {
-	v      [3]uint8
-	normal uint8
+type Vert struct {
+	V      [3]uint8
+	Normal uint8
 }
 
-type frame struct {
-	frameType uint32
-	min       vert
-	max       vert
-	name      [16]uint8
+type Frame struct {
+	Type uint32
+	Min  Vert
+	Max  Vert
+	Name [16]uint8
 }
 
 func main() {
@@ -96,67 +96,67 @@ func main() {
 	}
 	defer file.Close()
 
-	mdlName := filepath.Base(strings.TrimSuffix(os.Args[1], filepath.Ext(os.Args[1])))
+	mdl_name := filepath.Base(strings.TrimSuffix(os.Args[1], filepath.Ext(os.Args[1])))
 
-	var mdl mdlHeader
+	var mdl MdlHeader
 
 	err = binary.Read(file, binary.LittleEndian, &mdl)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if mdl.id != 1330660425 {
-		log.Fatalf("MDL magic %v != \"IDPO\"", mdl.version)
+	if mdl.Id != 1330660425 {
+		log.Fatalf("MDL magic %v != \"IDPO\"", mdl.Version)
 	}
 
-	if mdl.version != 6 {
-		log.Fatalf("MDL version %v != 6", mdl.version)
+	if mdl.Version != 6 {
+		log.Fatalf("MDL version %v != 6", mdl.Version)
 	}
 
-	for i := 0; i < int(mdl.numSkins); i++ {
-		var skin skin
-		var skinGroup skinGroup
+	for i := 0; i < int(mdl.NumSkins); i++ {
+		var skin Skin
+		var skin_group SkinGroup
 
-		skinGroup.numSkins = 1
+		skin_group.NumSkins = 1
 
 		_ = binary.Read(file, binary.LittleEndian, &skin)
 
-		if skin.skinType != 0 {
-			_ = binary.Read(file, binary.LittleEndian, &skinGroup)
+		if skin.Type != 0 {
+			_ = binary.Read(file, binary.LittleEndian, &skin_group)
 		}
 
-		_, _ = file.Seek(int64(skinGroup.numSkins*mdl.skinWidth*mdl.skinHeight), io.SeekCurrent)
+		_, _ = file.Seek(int64(skin_group.NumSkins*mdl.SkinWidth*mdl.SkinHeight), io.SeekCurrent)
 	}
 
-	stverts := make([]stVert, mdl.numVerts)
-	triangles := make([]triangle, mdl.numTriangles)
+	stverts := make([]STVert, mdl.NumVerts)
+	triangles := make([]Triangle, mdl.NumTriangles)
 
 	err = binary.Read(file, binary.LittleEndian, &stverts)
 	err = binary.Read(file, binary.LittleEndian, &triangles)
 
-	verts := [][]vert{}
-	frameNames := make([]string, mdl.numFrames)
+	verts := [][]Vert{}
+	frame_names := make([]string, mdl.NumFrames)
 
-	for k := 0; k < int(mdl.numFrames); k++ {
-		var frame frame
+	for k := 0; k < int(mdl.NumFrames); k++ {
+		var frame Frame
 
 		_ = binary.Read(file, binary.LittleEndian, &frame)
 
-		if frame.frameType != 0 {
-			panic("FIXME")
+		if frame.Type != 0 {
+			log.Fatal("FIXME")
 		}
 
-		frameVerts := make([]vert, mdl.numVerts)
-		_ = binary.Read(file, binary.LittleEndian, &frameVerts)
-		verts = append(verts, frameVerts)
+		frame_verts := make([]Vert, mdl.NumVerts)
+		_ = binary.Read(file, binary.LittleEndian, &frame_verts)
+		verts = append(verts, frame_verts)
 
-		name := strings.Split(string(frame.name[:]), "\x00")
+		name := strings.Split(string(frame.Name[:]), "\x00")
 
 		if name[0] == "" {
 			name[0] = "Frame " + strconv.Itoa(k)
 		}
 
-		frameNames[k] = name[0]
+		frame_names[k] = name[0]
 	}
 
 	out, err := os.Create(os.Args[2])
@@ -168,15 +168,15 @@ func main() {
 	out.WriteString("{\n")
 	out.WriteString("\t\"materials\": [")
 	out.WriteString("\n\t{\n")
-	out.WriteString("\t\t\"mapDiffuse\": \"textures/" + mdlName + ".jpg\",\n")
+	out.WriteString("\t\t\"mapDiffuse\": \"textures/" + mdl_name + ".jpg\",\n")
 	out.WriteString("\t\t\"mapDiffuseWrap\": [\"repeat\", \"repeat\"]\n")
 	out.WriteString("\t} ],\n")
 	out.WriteString("\t\"vertices\": [")
 
 	for _, vertice := range verts[0] {
-		out.WriteString(strconv.FormatFloat(float64(mdl.scale.x*float32(vertice.v[0])+mdl.origin.x), 'f', -1, 32) + ",")
-		out.WriteString(strconv.FormatFloat(float64(mdl.scale.y*float32(vertice.v[1])+mdl.origin.y), 'f', -1, 32) + ",")
-		out.WriteString(strconv.FormatFloat(float64(mdl.scale.z*float32(vertice.v[2])+mdl.origin.z), 'f', -1, 32) + ",")
+		out.WriteString(strconv.FormatFloat(float64(mdl.Scale.X*float32(vertice.V[0])+mdl.Origin.X), 'f', -1, 32) + ",")
+		out.WriteString(strconv.FormatFloat(float64(mdl.Scale.Y*float32(vertice.V[1])+mdl.Origin.Y), 'f', -1, 32) + ",")
+		out.WriteString(strconv.FormatFloat(float64(mdl.Scale.Z*float32(vertice.V[2])+mdl.Origin.Z), 'f', -1, 32) + ",")
 	}
 	out.Seek(-1, io.SeekCurrent)
 
@@ -186,11 +186,11 @@ func main() {
 		out.WriteString("\t\"morphTargets\": [\n")
 
 		for i, frame := range verts {
-			out.WriteString("\t\t{ \"name\": \"" + frameNames[i] + "\", \"vertices\": [")
+			out.WriteString("\t\t{ \"name\": \"" + frame_names[i] + "\", \"vertices\": [")
 			for _, vertice := range frame {
-				out.WriteString(strconv.FormatFloat(float64(mdl.scale.x*float32(vertice.v[0])+mdl.origin.x), 'f', -1, 32) + ",")
-				out.WriteString(strconv.FormatFloat(float64(mdl.scale.y*float32(vertice.v[1])+mdl.origin.y), 'f', -1, 32) + ",")
-				out.WriteString(strconv.FormatFloat(float64(mdl.scale.z*float32(vertice.v[2])+mdl.origin.z), 'f', -1, 32) + ",")
+				out.WriteString(strconv.FormatFloat(float64(mdl.Scale.X*float32(vertice.V[0])+mdl.Origin.X), 'f', -1, 32) + ",")
+				out.WriteString(strconv.FormatFloat(float64(mdl.Scale.Y*float32(vertice.V[1])+mdl.Origin.Y), 'f', -1, 32) + ",")
+				out.WriteString(strconv.FormatFloat(float64(mdl.Scale.Z*float32(vertice.V[2])+mdl.Origin.Z), 'f', -1, 32) + ",")
 			}
 			out.Seek(-1, io.SeekCurrent)
 			out.WriteString("] },\n")
@@ -203,26 +203,26 @@ func main() {
 	out.WriteString("\t\"uvs\": [[")
 
 	for _, stvertice := range stverts {
-		out.WriteString(strconv.FormatFloat(float64(stvertice.s)/float64(mdl.skinWidth), 'f', -1, 32) + ",")
-		out.WriteString(strconv.FormatFloat(1-float64(stvertice.t)/float64(mdl.skinHeight), 'f', -1, 32) + ",")
+		out.WriteString(strconv.FormatFloat(float64(stvertice.S)/float64(mdl.SkinWidth), 'f', -1, 32) + ",")
+		out.WriteString(strconv.FormatFloat(1-float64(stvertice.T)/float64(mdl.SkinHeight), 'f', -1, 32) + ",")
 	}
 
-	var needsHack bool
+	var needs_hack bool = false
 
 	for _, stvertice := range stverts {
-		if stvertice.onSeam != 0 {
-			needsHack = true
+		if stvertice.OnSeam != 0 {
+			needs_hack = true
 			break
 		}
 	}
 
-	if needsHack == true {
+	if needs_hack == true {
 		for _, stvertice := range stverts {
-			if stvertice.onSeam == 0 {
+			if stvertice.OnSeam == 0 {
 				out.WriteString("0,0,")
 			} else {
-				out.WriteString(strconv.FormatFloat((float64(stvertice.s)+float64(mdl.skinWidth/2))/float64(mdl.skinWidth), 'f', -1, 32) + ",")
-				out.WriteString(strconv.FormatFloat(1-float64(stvertice.t)/float64(mdl.skinHeight), 'f', -1, 32) + ",")
+				out.WriteString(strconv.FormatFloat((float64(stvertice.S)+float64(mdl.SkinWidth/2))/float64(mdl.SkinWidth), 'f', -1, 32) + ",")
+				out.WriteString(strconv.FormatFloat(1-float64(stvertice.T)/float64(mdl.SkinHeight), 'f', -1, 32) + ",")
 			}
 		}
 	}
@@ -233,17 +233,17 @@ func main() {
 
 	for _, triangle := range triangles {
 		out.WriteString("10,")
-		out.WriteString(strconv.Itoa(int(triangle.vertex[0])) + ",")
-		out.WriteString(strconv.Itoa(int(triangle.vertex[2])) + ",")
-		out.WriteString(strconv.Itoa(int(triangle.vertex[1])) + ",")
+		out.WriteString(strconv.Itoa(int(triangle.Vertex[0])) + ",")
+		out.WriteString(strconv.Itoa(int(triangle.Vertex[2])) + ",")
+		out.WriteString(strconv.Itoa(int(triangle.Vertex[1])) + ",")
 		out.WriteString("0,")
 
 		var uvs [3]int
 
-		for i, vertex := range triangle.vertex {
+		for i, vertex := range triangle.Vertex {
 			uvs[i] = int(vertex)
-			if triangle.front == 0 && stverts[vertex].onSeam != 0 {
-				uvs[i] += int(mdl.numVerts)
+			if triangle.Front == 0 && stverts[vertex].OnSeam != 0 {
+				uvs[i] += int(mdl.NumVerts)
 			}
 		}
 
